@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>国庆出行物品点检</title>
+<style>
+  :root {
+    --fg: #1a1a1a;
+    --fg-mid: #555;
+    --fg-light: #999;
+    --line: #ddd;
+    --bg-done: #f2f2f2;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #fff;
+    color: var(--fg);
+    line-height: 1.6;
+    padding: 32px 20px 80px;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  header { border-bottom: 2px solid var(--fg); padding-bottom: 16px; margin-bottom: 8px; }
+  h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+  h1[contenteditable] { outline: none; cursor: text; border-bottom: 1px dashed transparent; }
+  h1[contenteditable]:hover, h1[contenteditable]:focus { border-bottom-color: var(--line); }
+  h1[contenteditable]:empty::before { content: "点击输入标题"; color: var(--fg-light); }
+  .sub { font-size: 13px; color: var(--fg-mid); display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+  #progress { font-variant-numeric: tabular-nums; }
+  .bar { height: 4px; background: var(--line); margin-top: 10px; }
+  .bar > div { height: 100%; background: var(--fg); width: 0%; transition: width .2s; }
+
+  .category { border-top: 1px solid var(--line); padding: 20px 0 4px; margin-top: 12px; }
+  .cat-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .cat-title { font-size: 15px; font-weight: 700; letter-spacing: 2px; }
+  .cat-count { font-size: 12px; color: var(--fg-light); font-variant-numeric: tabular-nums; }
+  .cat-del {
+    font-size: 12px; color: var(--fg-light); background: none; border: none;
+    cursor: pointer; font-family: inherit; padding: 2px 4px;
+  }
+  .cat-del:hover { color: var(--fg); text-decoration: underline; }
+
+  .item { display: flex; align-items: center; gap: 12px; padding: 8px 4px; border-bottom: 1px solid #f0f0f0; }
+  .item:last-of-type { border-bottom: none; }
+
+  .checkbox {
+    width: 18px; height: 18px; min-width: 18px;
+    border: 1.5px solid var(--fg-mid);
+    background: #fff; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;
+  }
+  .checkbox:hover { border-color: var(--fg); }
+  .checkbox svg { width: 12px; height: 12px; display: none; }
+  .item.done .checkbox { background: var(--fg); border-color: var(--fg); }
+  .item.done .checkbox svg { display: block; }
+
+  .item-name { flex: 1; font-size: 15px; cursor: pointer; user-select: none; }
+  .item.done .item-name { color: var(--fg-light); text-decoration: line-through; }
+  .item-done-at { font-size: 11px; color: var(--fg-light); font-variant-numeric: tabular-nums; }
+
+  .del {
+    border: none; background: none; color: #ccc;
+    font-size: 16px; cursor: pointer; padding: 0 2px; line-height: 1;
+    font-family: inherit;
+  }
+  .del:hover { color: var(--fg); }
+
+  .add-row { display: flex; gap: 8px; padding: 10px 4px 12px; }
+  .add-row input {
+    flex: 1; border: none; border-bottom: 1px solid var(--line);
+    font-size: 14px; font-family: inherit; padding: 4px 2px;
+    background: transparent; color: var(--fg); outline: none;
+  }
+  .add-row input:focus { border-bottom-color: var(--fg); }
+  .add-row input::placeholder { color: #bbb; }
+  .add-row button {
+    border: 1px solid var(--fg); background: #fff; color: var(--fg);
+    font-size: 13px; font-family: inherit; padding: 2px 14px; cursor: pointer;
+  }
+  .add-row button:hover { background: var(--fg); color: #fff; }
+
+  .add-cat { margin-top: 24px; display: flex; gap: 8px; }
+  .add-cat input {
+    flex: 1; border: none; border-bottom: 1px solid var(--line);
+    font-size: 14px; font-family: inherit; padding: 4px 2px;
+    background: transparent; color: var(--fg); outline: none;
+  }
+  .add-cat input:focus { border-bottom-color: var(--fg); }
+  .add-cat button {
+    border: 1px solid var(--fg); background: #fff; color: var(--fg);
+    font-size: 13px; font-family: inherit; padding: 2px 14px; cursor: pointer;
+  }
+  .add-cat button:hover { background: var(--fg); color: #fff; }
+
+  footer { margin-top: 40px; border-top: 1px solid var(--line); padding-top: 12px; display: flex; justify-content: space-between; }
+  footer button {
+    border: none; background: none; color: var(--fg-light);
+    font-size: 12px; font-family: inherit; cursor: pointer; padding: 2px 4px;
+  }
+  footer button:hover { color: var(--fg); text-decoration: underline; }
+
+  @media (max-width: 480px) {
+    body { padding: 24px 16px 60px; }
+    h1 { font-size: 19px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="pageTitle" contenteditable="true" spellcheck="false" title="点击编辑标题">国庆出行物品点检</h1>
+  <div class="sub">
+    <span>共 <span id="total">0</span> 项 · 已点检 <span id="done">0</span> 项</span>
+    <span id="progress">0%</span>
+  </div>
+  <div class="bar"><div id="barFill"></div></div>
+</header>
+
+<main id="list"></main>
+
+<div class="add-cat">
+  <input id="newCatName" type="text" placeholder="新分类名称">
+  <button onclick="addCategory()">添加分类</button>
+</div>
+
+<footer>
+  <button onclick="resetChecks()">重置全部勾选</button>
+  <button onclick="resetAll()">恢复默认清单</button>
+</footer>
+
+<script>
+(function () {
+  var STORAGE_KEY = 'trip-checklist-2026guoqing-v1';
+
+  var defaults = [
+    { name: '衣服', items: [
+      { name: '内衣 2 套' },
+      { name: '睡衣 1 套' },
+      { name: '袜子 2 套' },
+      { name: '外套 2 套（薄、厚）' },
+      { name: '长袖/裤子 2 套' }
+    ]},
+    { name: '洗漱', items: [
+      { name: '面霜' },
+      { name: '剃须刀' },
+      { name: '牙线' },
+      { name: '直板夹' },
+      { name: '牙膏' },
+      { name: '散粉' },
+      { name: '镊子' },
+      { name: '发箍' },
+      { name: '冲牙器' }
+    ]},
+    { name: '随身', items: [
+      { name: '身份证' },
+      { name: '手机/剃须充电器' },
+      { name: '耳机' },
+      { name: '药（小檗碱、鼻喷）' },
+      { name: '咖啡' },
+      { name: '洞箫' },
+      { name: '笔记本电脑（含充电器）' },
+      { name: '手表充电器' },
+      { name: 'pad' },
+      { name: '充电宝' }
+    ]}
+  ];
+
+  var data;
+  var DEFAULT_TITLE = '国庆出行物品点检';
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.categories)) {
+          data = parsed;
+          setTitle(parsed.title || DEFAULT_TITLE);
+          return;
+        }
+      }
+    } catch (e) { /* 忽略损坏数据 */ }
+    data = { title: DEFAULT_TITLE, categories: JSON.parse(JSON.stringify(defaults)) };
+    setTitle(DEFAULT_TITLE);
+  }
+
+  function save() {
+    data.title = getTitle();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  function getTitle() {
+    var el = document.getElementById('pageTitle');
+    return (el.textContent || '').trim();
+  }
+
+  function setTitle(t) {
+    var el = document.getElementById('pageTitle');
+    if (el.textContent !== t) el.textContent = t;
+    document.title = t;
+  }
+
+  (function bindTitle() {
+    var el = document.getElementById('pageTitle');
+    el.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+    });
+    el.addEventListener('blur', function () {
+      if (!getTitle()) setTitle(DEFAULT_TITLE);
+      save();
+      render();
+    });
+  })();
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function render() {
+    var main = document.getElementById('list');
+    var html = '';
+    var total = 0, done = 0;
+
+    data.categories.forEach(function (cat, ci) {
+      var catDone = 0;
+      cat.items.forEach(function (it) { if (it.checked) { catDone++; done++; } });
+      total += cat.items.length;
+
+      html += '<section class="category">';
+      html += '<div class="cat-head">';
+      html += '<span class="cat-title">' + esc(cat.name) + '</span>';
+      html += '<span><span class="cat-count">' + catDone + '/' + cat.items.length + '</span>';
+      html += ' <button class="cat-del" onclick="delCategory(' + ci + ')">删除分类</button></span>';
+      html += '</div>';
+
+      cat.items.forEach(function (it, ii) {
+        html += '<div class="item' + (it.checked ? ' done' : '') + '">';
+        html += '<button class="checkbox" onclick="toggle(' + ci + ',' + ii + ')" aria-label="点检">';
+        html += '<svg viewBox="0 0 12 12"><path d="M1.5 6.5 L4.5 9.5 L10.5 2.5" stroke="#fff" stroke-width="2" fill="none"/></svg>';
+        html += '</button>';
+        html += '<span class="item-name" onclick="toggle(' + ci + ',' + ii + ')">' + esc(it.name) + '</span>';
+        html += '<button class="del" onclick="delItem(' + ci + ',' + ii + ')" title="删除" aria-label="删除">&times;</button>';
+        html += '</div>';
+      });
+
+      html += '<div class="add-row">';
+      html += '<input type="text" placeholder="添加物品…" data-cat="' + ci + '" onkeydown="if(event.key===\'Enter\'){addItem(' + ci + ', this)}">';
+      html += '<button onclick="addItem(' + ci + ', this.previousElementSibling)">添加</button>';
+      html += '</div>';
+      html += '</section>';
+    });
+
+    main.innerHTML = html;
+
+    document.getElementById('total').textContent = total;
+    document.getElementById('done').textContent = done;
+    var pct = total ? Math.round(done / total * 100) : 0;
+    document.getElementById('progress').textContent = pct + '%';
+    document.getElementById('barFill').style.width = pct + '%';
+  }
+
+  window.toggle = function (ci, ii) {
+    var it = data.categories[ci].items[ii];
+    it.checked = !it.checked;
+    save();
+    render();
+  };
+
+  window.addItem = function (ci, input) {
+    var name = input.value.trim();
+    if (!name) { input.focus(); return; }
+    data.categories[ci].items.push({ name: name, checked: false });
+    save();
+    render();
+    var inputs = document.querySelectorAll('.add-row input[data-cat="' + ci + '"]');
+    if (inputs.length) inputs[0].focus();
+  };
+
+  window.delItem = function (ci, ii) {
+    data.categories[ci].items.splice(ii, 1);
+    save();
+    render();
+  };
+
+  window.addCategory = function () {
+    var input = document.getElementById('newCatName');
+    var name = input.value.trim();
+    if (!name) { input.focus(); return; }
+    data.categories.push({ name: name, items: [] });
+    input.value = '';
+    save();
+    render();
+  };
+
+  window.delCategory = function (ci) {
+    var cat = data.categories[ci];
+    if (!confirm('删除分类「' + cat.name + '」及其 ' + cat.items.length + ' 项物品？')) return;
+    data.categories.splice(ci, 1);
+    save();
+    render();
+  };
+
+  window.resetChecks = function () {
+    if (!confirm('重置全部勾选状态？清单内容保留。')) return;
+    data.categories.forEach(function (cat) {
+      cat.items.forEach(function (it) { it.checked = false; });
+    });
+    save();
+    render();
+  };
+
+  window.resetAll = function () {
+    if (!confirm('恢复默认清单？将丢失所有自定义增删和勾选记录。')) return;
+    data = { title: DEFAULT_TITLE, categories: JSON.parse(JSON.stringify(defaults)) };
+    setTitle(DEFAULT_TITLE);
+    save();
+    render();
+  };
+
+  load();
+  render();
+})();
+</script>
+</body>
+</html>
